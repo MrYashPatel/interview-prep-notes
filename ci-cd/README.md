@@ -614,4 +614,184 @@ Storing long-lived AWS credentials (via secrets or ENV) in CI is risky.
 | ❌ Can't manage secrets per env       | ✅ Use sealed-secrets or External Secrets Operator with Argo CD                        |
 
 ---
+---
+---
+---
+---
 
+## ✅ REAL-WORLD CI/CD SCENARIO-BASED QUESTIONS
+
+---
+
+### 🚨 CI: GitHub Actions SCENARIOS
+
+#### 1. 🔐 Secret rotation broke the build
+
+> "Your build started failing with 403 when pushing image to GHCR."
+
+**Q: How do you handle secrets that change frequently (e.g., PAT, AWS creds) in GitHub Actions pipelines without downtime?**
+
+✅ **Expected**:
+
+* Use OIDC + GitHub Actions → AWS IAM roles via IRSA (no static creds).
+* Rotate secrets via GitHub Actions workflows + `gh` CLI.
+* Use environment-specific secrets & deploy secrets via HashiCorp Vault/Secrets Manager.
+
+---
+
+#### 2. 🧪 Unit tests are flaky
+
+> "Random unit test failures make PR approvals slow."
+
+**Q: How do you make pipelines resilient to flaky unit tests?**
+
+✅ **Expected**:
+
+* Use `continue-on-error: false` + retry logic (e.g., `jest.retryTimes(3)`).
+* Identify flaky tests using test analytics (e.g., `jest --json` + artifacts).
+* Isolate flaky tests and run them in a separate stage.
+* Use parallel test matrix with `fail-fast: false`.
+
+---
+
+#### 3. 🐢 Pipeline is slow
+
+> "CI pipeline takes 30 mins for every PR."
+
+**Q: How to optimize a slow GitHub Actions pipeline?**
+
+✅ **Expected**:
+
+* Split into reusable workflows + jobs.
+* Use matrix strategy to parallelize (e.g., test on multiple Node/Python versions).
+* Use caching (e.g., `actions/cache`) for `node_modules`, Docker layers, terraform `.terraform` directory.
+* Use `buildx` for faster multi-platform image builds.
+
+---
+
+#### 4. 📦 Docker image too large
+
+> "Image size went from 400MB to 1.3GB — deployment got throttled."
+
+**Q: How do you reduce Docker image sizes in your CI pipeline?**
+
+✅ **Expected**:
+
+* Multi-stage Docker builds.
+* Use distroless/alpine base images.
+* Only copy production dependencies.
+* Scan with `trivy` + add `actions/upload-artifact@v4` for SBOMs.
+
+---
+
+#### 5. 🤐 Team added kubectl apply manually, Argo CD drifted
+
+> "Deployment drifted, Argo CD showing OutOfSync state."
+
+**Q: How do you prevent & detect GitOps drift when team applies manually?**
+
+✅ **Expected**:
+
+* Enable drift detection in Argo CD (auto-sync + prune).
+* Protect namespaces from `kubectl apply` using RBAC/OPA/Gatekeeper.
+* Educate teams → only Git is source of truth.
+* Use Argo CD Notifications + Slack alerts on `OutOfSync`.
+
+---
+
+### 🚀 CD: Argo CD SCENARIOS
+
+---
+
+#### 6. 🔄 Deployment stuck in "Progressing"
+
+> "Argo CD app stuck, pod not becoming Ready."
+
+**Q: How to troubleshoot Argo CD sync hanging or stuck deployment?**
+
+✅ **Expected**:
+
+* Check Argo CD UI logs, and describe the pod (`kubectl describe pod`).
+* Look for `ImagePullBackOff`, `CrashLoopBackOff`, probe failure.
+* Check if health check misconfigured (custom resource?).
+* Sync only selected resource using `resource.exclude`.
+
+---
+
+#### 7. 🧬 200+ microservices, managing sync order
+
+> "App-of-apps too big, and services must sync in order."
+
+**Q: How to manage hundreds of microservices with sync dependency between them?**
+
+✅ **Expected**:
+
+* Use App-of-apps pattern with sync waves (`argocd.argoproj.io/sync-wave`).
+* Group services into Helm charts/Kustomize overlays.
+* Split apps into multiple parent apps (per domain).
+* Use `ignoreDifferences` for volatile fields (e.g., in CRDs).
+
+---
+
+#### 8. 🔄 Manual rollback required
+
+> "Argo CD deployed broken version. Need rollback to last good state."
+
+**Q: How do you manage rollbacks in Argo CD?**
+
+✅ **Expected**:
+
+* Rollback to a Git commit (`git revert`, then push).
+* Use Argo CD Application history.
+* For Helm: Use `helm rollback` equivalent via Argo.
+* Add rollback hook in case of health failure (pre/post sync hook).
+
+---
+
+#### 9. 🔐 Secure Argo CD with IAM/OIDC
+
+> "We want developers to access only their app deployments."
+
+**Q: How do you enforce least privilege access in Argo CD UI per team?**
+
+✅ **Expected**:
+
+* Enable OIDC integration (e.g., with Azure AD, AWS SSO).
+* Use `argocd-rbac-cm` for RBAC policies:
+
+  ```
+  g:team-dev: applications, get, my-apps/*
+  g:team-admin: *, *, *
+  ```
+* Use `project` scope to isolate access.
+
+---
+
+#### 10. 🔁 PR-based preview environments
+
+> "We want preview environments for every PR."
+
+**Q: How do you create a temporary test environment per pull request using GitHub Actions + Argo CD?**
+
+✅ **Expected**:
+
+* GitHub Action detects PR, modifies Kustomize/Helm values (unique namespace).
+* Commit to a preview branch with env changes.
+* Argo CD auto-syncs the new app with `pr-123` namespace.
+* Teardown on PR close via workflow.
+
+---
+
+### 💣 BONUS: DAILY CI/CD PROBLEMS A DEVOPS ENGINEER FACES
+
+| Problem                             | Why it Happens                  | Prevention/Fix                           |
+| ----------------------------------- | ------------------------------- | ---------------------------------------- |
+| ❌ `kubectl apply` overrides Argo CD | Manual drift                    | OPA Gatekeeper, RBAC                     |
+| ⌛ CI timeout on `terraform plan`    | Network/API lag                 | Increase timeout, use backend locking    |
+| 🔐 AWS secret expired               | Static creds used               | OIDC + IRSA                              |
+| ⚠️ Helm upgrade fails               | CRDs not applied                | Separate CRD management                  |
+| 🌀 Argo stuck in terminating        | Finalizers not removed          | Force delete with `kubectl patch`        |
+| 🧩 `imagePullBackOff`               | Wrong image tag / no ECR access | Validate image push before deploy        |
+| 📊 GitHub Action limits hit         | Too many concurrent jobs        | Use self-hosted runners or reduce matrix |
+
+---
