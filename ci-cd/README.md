@@ -291,8 +291,12 @@ Let me know if you want any of the following:
 3. 🧪 Advanced testing (integration, coverage, report uploads)
 4. 📊 Integrate with Slack for alerts or CodeCov
 
-
 ---
+---
+---
+
+
+
 
 ### 🔹 PHASE 2: CD using Argo CD (Beginner → Expert)
 
