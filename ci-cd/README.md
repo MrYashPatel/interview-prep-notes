@@ -310,6 +310,119 @@ Let me know if you want any of the following:
 
 ---
 
+Great! You're now set to master **Phase 2: CD using Argo CD** in depth. Here's how we'll break it down:
+
+---
+
+### 🔷 **Argo CD – Beginner to Expert Roadmap**
+
+#### ✅ **1. GitOps Model**
+
+* Declarative desired state in Git
+* Argo CD as the **pull-based** CD tool
+* Git is the single source of truth
+* Reconciliation loops
+
+---
+
+#### ✅ **2. Application CRs (Custom Resources)**
+
+* `Application` object: maps Git repo to K8s namespace
+* Key fields: `spec.source`, `spec.destination`, `spec.syncPolicy`, `spec.project`
+* Health and sync status tracked by Argo CD
+
+---
+
+#### ✅ **3. Sync Methods**
+
+* **Manual Sync**: `argocd app sync`
+* **Auto Sync**: `automated: { prune: true, selfHeal: true }`
+* **Hooks**: PreSync, Sync, PostSync (used for migrations, DB changes, etc.)
+
+---
+
+#### ✅ **4. App-of-Apps Pattern**
+
+* One "Parent" app declares multiple child `Application` CRs
+* Used for managing microservices, teams, or environments
+* Best with `kustomize` directory structure or Helm charts
+
+---
+
+#### ✅ **5. Multi-Cluster Deployment**
+
+* Argo CD supports multiple clusters via `argocd cluster add`
+* Each `Application` CR can target a different `cluster + namespace`
+* Use labels and projects for access control and grouping
+
+---
+
+#### ✅ **6. RBAC, OIDC, Multi-Tenancy**
+
+* RBAC: based on Argo CD roles + JWT
+* OIDC: integrates with GitHub, Okta, Google, etc.
+* Projects: isolate apps by team or environment
+* Prevent namespace/cluster overlap via project restrictions
+
+---
+
+#### ✅ **7. Drift Detection**
+
+* Auto detects drift between Git and live cluster
+* Can auto-revert or alert via Slack
+* Use `resource.exclusions` to avoid noise
+
+---
+
+#### ✅ **8. Helm / Kustomize Integration**
+
+* Supports:
+
+  * Helm 3 charts
+  * Helm value overrides
+  * Kustomize with overlays
+* Declarative setup in Git → Helm/Kustomize → Argo CD Application
+
+---
+
+#### ✅ **9. Progressive Delivery**
+
+* **Canary Deployment**: Manual promotion or with tools like Argo Rollouts
+* **Blue/Green**: Switch services between live and preview
+* Integrate with Ingress controllers or Service Mesh (Istio/Linkerd)
+
+---
+
+### 🔶 **Real-World Scenarios & Troubleshooting**
+
+#### 🚨 Scenario 1: App stuck in `Pending`
+
+* Check if cluster is added and accessible
+* Validate `spec.source.path` and repo credentials
+* Inspect sync policy errors
+
+#### 🚨 Scenario 2: Drift Detected but Not Syncing
+
+* Auto-sync might be disabled
+* Hook or manifest might block sync
+* Check for pruning-related conflicts
+
+#### 🚨 Scenario 3: Sync Order Problem
+
+* Use `dependsOn` annotation in App-of-Apps
+* Control order using Helm `hooks` or resource `wait`
+
+#### 🚨 Scenario 4: Multi-cluster Strategy
+
+* Add multiple clusters: `argocd cluster add`
+* Isolate per Application or Project
+* Use Argo CD Projects to manage multi-team/multi-tenant access
+
+---
+---
+---
+
+
 ### 🔹 PHASE 3: CI/CD Integration
 
 * GitHub Actions → Argo CD trigger (Webhooks, Argo CD auto-sync, commit conventions)
