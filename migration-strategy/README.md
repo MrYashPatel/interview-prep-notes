@@ -10,7 +10,7 @@ Optimize     	---         Analyse and see if we can reduce the code, optimize it
 Rehost	    – Lift and shift mechanism. Move the code from on Prem to direct cloud. That’s it. Minimum Scalability, Efficiency and Optimality
 Refactor	– Refactor the code, shift to Micro services from Monolithic.
 Replatform	– Lift and Shift with added feature to make it more scalable, efficient and
-               optimized code. 
+                optimized code. 
 Relocate	– Moving to cloud using EKS/OpenShift and other services. Is more costly.
 Retain		– Retaining certain pieces of code on prem for security purposes.
 Retire		– Migrating and removing the piece of code not being in use. 
