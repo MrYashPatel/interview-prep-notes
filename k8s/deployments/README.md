@@ -82,6 +82,182 @@ strategy:
 * 10% traffic → new version.
 * Monitor → gradually increase to 100%.
 
+
+Okay — let’s break this into **concept + YAML code** so you see exactly how Canary works in Kubernetes using two Deployments with different `version` labels (`v1` for stable, `v2` for canary).
+
+---
+
+## **1️⃣ Concept**
+
+* **Deployment v1** → Old stable version of your app. Label: `version: v1`
+* **Deployment v2** → New canary version (only small % of traffic). Label: `version: v2`
+* **Service** → Instead of pointing to just one version, it selects *both* Deployments (same `app` label, different `version`).
+* **Traffic Split** → You control how much traffic goes to each version by **adjusting replicas** in each Deployment. Example:
+
+  * `v1` → 9 replicas (90% traffic)
+  * `v2` → 1 replica (10% traffic)
+
+---
+
+## **2️⃣ YAML Example**
+
+### **Stable Deployment (v1)**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-v1
+spec:
+  replicas: 9
+  selector:
+    matchLabels:
+      app: myapp
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: myapp
+        version: v1
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:1.0
+        ports:
+        - containerPort: 80
+```
+
+---
+
+### **Canary Deployment (v2)**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: myapp
+        version: v2
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:2.0
+        ports:
+        - containerPort: 80
+```
+
+---
+
+### **Service (Same for both)**
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-service
+spec:
+  selector:
+    app: myapp
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: ClusterIP
+```
+
+---
+
+Istio me canary deployment traffic split **sidecar proxy (Envoy)** ke through hota hai, jo aapke pod ke sath inject hota hai.
+Normal Kubernetes me aapko alag Service banana padta hai ya Deployment scale karke manage karna padta hai,
+lekin Istio me aap **VirtualService** + **DestinationRule** ka use karke percentage-based traffic routing kar sakte ho.
+
+---
+
+### Example: Istio Canary Deployment (10% → 100% rollout)
+
+#### 1️⃣ Two versions of your app
+
+* **Deployment v1**: old stable version
+* **Deployment v2**: new canary version
+  Dono ke label alag honge (e.g., `version: v1` aur `version: v2`).
+
+---
+
+#### 2️⃣ DestinationRule
+
+Ye rule Istio ko batata hai ki service ke kaunse versions hain aur unko kaise identify karna hai.
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: my-app
+spec:
+  host: my-app.default.svc.cluster.local
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+  - name: v2
+    labels:
+      version: v2
+```
+
+---
+
+#### 3️⃣ VirtualService
+
+Ye rule request ko percentage me split karega.
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: my-app
+spec:
+  hosts:
+  - my-app
+  http:
+  - route:
+    - destination:
+        host: my-app
+        subset: v1
+      weight: 90
+    - destination:
+        host: my-app
+        subset: v2
+      weight: 10
+```
+
+---
+
+#### 4️⃣ Rollout Process
+
+1. **Start** → 90% traffic v1, 10% v2
+   (new version production me aa gaya but sirf 10% users dekh rahe)
+2. **Monitor** → Metrics check karo (latency, error rate, CPU/mem)
+3. **If stable** → Weight change:
+
+   * 50% v1, 50% v2
+4. **If still stable** → 0% v1, 100% v2 (full rollout)
+
+---
+
+#### 5️⃣ Benefits in Istio
+
+* **Zero downtime** — traffic shift hota hai live.
+* **Quick rollback** — sirf VirtualService me weight change karo, turant purana version wapas aa jata hai.
+* **Fine-grained control** — path-based, header-based ya user-based routing possible hai (sirf percentage hi nahi).
+
 ---
 
 #### **d) Blue-Green Deployment** (via two separate environments)
