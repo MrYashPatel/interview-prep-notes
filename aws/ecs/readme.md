@@ -220,3 +220,63 @@ aws ecs execute-command \
 
 
 If it’s crash-looping, run a temporary sleeping copy (see §5A), then exec into that.
+
+
+
+---
+
+Section 3 – Troubleshooting Playbook (Real Job Problems)
+1️⃣ Tasks stuck in PENDING
+Checks:
+
+ecs:DescribeServices for events.
+
+EC2 cluster CPU/mem capacity.
+
+ECS agent logs /var/log/ecs/ecs-agent.log.
+
+Task execution IAM role permissions.
+
+2️⃣ ALB health check failing
+Checks:
+
+ALB health check path/port.
+
+Security group allows ALB → task traffic.
+
+App responds with 200 OK on health check.
+
+3️⃣ High CPU cost in Fargate
+Fixes:
+
+Reduce vCPU in Task Definition.
+
+Switch to EC2 Spot instances if possible.
+
+4️⃣ Image pull failure
+Checks:
+
+ECR auth policy.
+
+Image tag exists in ECR.
+
+Network route from ECS task to ECR.
+
+5️⃣ Logs missing in CloudWatch
+Checks:
+
+ECS log driver set to awslogs.
+
+IAM permissions: logs:CreateLogStream, logs:PutLogEvents.
+
+Section 4 – ECS Cost Optimization Cheatsheet
+EC2 launch type → Use Spot + On-Demand mix with ASG.
+
+Fargate → Right-size vCPU/memory, stop idle services.
+
+Use CloudWatch alarms to detect underutilization.
+
+Use Capacity Providers for automatic Spot instance usage.
+
+Turn off unused ECS services in non-prod at night with Lambda.
+
