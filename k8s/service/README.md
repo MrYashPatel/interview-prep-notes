@@ -1,32 +1,6 @@
 
 ---
 
-1️⃣ Policy & Governance
-
-Kyverno → Resource validation, mutation, generation
-
-OPA/Gatekeeper → Policy-as-code, fine-grained enforcement
-
-PodSecurityStandards / PodSecurityPolicies → Pod hardening
-
-
-
----
-
-2️⃣ Advanced Networking
-
-CNI plugins deep dive (Calico, Cilium, Weave)
-
-NetworkPolicies → Pod-to-pod / namespace isolation
-
-Service Mesh (Istio, Linkerd) → Traffic control, mTLS, observability
-
-Ingress controllers & advanced routing →…
-[07:05, 2025-08-19] Yash: Perfect 🔥 Let’s master Kubernetes Services like the top 1% DevOps Engineers. I’ll take you from beginner → advanced → expert with scenario-based questions & answers that are directly relevant for interviews + production troubleshooting.
-
-
----
-
 🚀 Mastering Kubernetes Services (Beginner → Expert → Top 1%)
 
 
