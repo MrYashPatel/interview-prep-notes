@@ -189,3 +189,102 @@ Perfect, bhai — let’s tackle these **EFS interview-style questions** with pr
 * ✅ Benefits: Shared storage across multiple pods, dynamic scaling, multi-AZ availability.
 
 ---
+
+---
+
+## 1️⃣ **Shared storage across pods – integrate EFS using CSI driver**
+
+* **Steps:**
+
+  1. **Install EFS CSI driver** in your EKS cluster:
+
+     ```bash
+     kubectl apply -k "github.com/kubernetes-sigs/aws-efs-csi-driver/deploy/kubernetes/overlays/stable/ecr/?ref=release-1.6"
+     ```
+  2. **Create EFS file system** with mount targets in all AZs of the cluster.
+  3. Create a **PersistentVolume (PV)** using `efs.csi.aws.com` driver:
+
+     ```yaml
+     apiVersion: v1
+     kind: PersistentVolume
+     metadata:
+       name: efs-pv
+     spec:
+       capacity:
+         storage: 5Gi
+       volumeMode: Filesystem
+       accessModes:
+         - ReadWriteMany
+       persistentVolumeReclaimPolicy: Retain
+       storageClassName: efs-sc
+       csi:
+         driver: efs.csi.aws.com
+         volumeHandle: fs-12345678
+     ```
+  4. Create **PersistentVolumeClaim (PVC)** and mount in pods.
+* ✅ Result: All pods in cluster can **concurrently read/write** shared storage.
+
+---
+
+## 2️⃣ **Reduce costs if most files are rarely accessed**
+
+* Enable **EFS Lifecycle Management → move files to Infrequent Access (IA)**.
+* Configure **N days of inactivity** (7, 14, 30, 60, 90).
+* Files auto-tier to IA → \~92% cheaper.
+* Accessed files automatically move back to Standard.
+
+---
+
+## 3️⃣ **Throughput bursts not enough for big data jobs**
+
+* Options:
+
+  1. Switch **EFS to Provisioned Throughput** → independent of storage size.
+  2. Use **parallelization across multiple EFS mounts** or EC2 nodes to increase throughput.
+  3. For extremely heavy workloads → consider **S3 + EMR / Spark** instead of EFS.
+
+---
+
+## 4️⃣ **When to choose One Zone EFS over Regional EFS**
+
+* **One Zone:**
+
+  * Data stored in **single AZ**.
+  * Cheaper (\~50% lower).
+  * Use when **AZ-local workloads** or **non-critical shared storage**.
+
+* **Regional:**
+
+  * Data replicated across **multiple AZs**.
+  * Highly available, multi-AZ failover.
+  * Use when **critical shared storage for multi-AZ pods**.
+
+> Interview Tip: “One Zone = cost optimization, Regional = HA and durability.”
+
+---
+
+## 5️⃣ **Enforce different Linux user permissions for different microservices accessing same EFS**
+
+* Use **EFS Access Points**:
+
+  * Create **multiple access points**, each with a **different POSIX UID/GID and root directory**.
+  * Microservice A → mounts Access Point A → UID/GID 1001
+  * Microservice B → mounts Access Point B → UID/GID 1002
+* Benefits:
+
+  * Each microservice sees **its own isolated directory**.
+  * No UID/GID conflicts.
+  * Enforces **Linux file permissions** per microservice.
+
+---
+
+✅ **Interview-ready summary:**
+
+* EKS pods → EFS via **CSI driver + PV/PVC**.
+* Rarely accessed files → **IA class with lifecycle policy**.
+* Throughput issues → **provisioned throughput or alternative storage**.
+* One Zone EFS → cost-sensitive single AZ, Regional EFS → HA.
+* Multi-service permissions → **Access Points with UID/GID isolation**.
+
+---
+
