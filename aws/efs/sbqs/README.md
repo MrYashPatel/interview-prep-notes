@@ -99,3 +99,93 @@ To mount an EFS file system on EC2/EKS pods, you need:
 
 ---
 
+Perfect, bhai — let’s tackle these **EFS interview-style questions** with precise, scenario-ready answers.
+
+---
+
+## 1️⃣ **How do you mount EFS on multiple AZ EC2 instances?**
+
+* **EFS is AZ-agnostic** → you can create **mount targets in each AZ** where EC2 instances exist.
+* Steps:
+
+  1. Create **EFS file system**.
+  2. Create **mount targets in each AZ/subnet**.
+
+     * Security Group allows inbound **TCP 2049 (NFS)**.
+  3. On each EC2 instance, use **DNS name of EFS** to mount:
+
+     ```bash
+     sudo mount -t nfs4 -o nfsvers=4.1 fs-12345678.efs.us-east-1.amazonaws.com:/ /mnt/efs
+     ```
+
+  * EFS DNS resolves to the correct mount target in the AZ of the EC2 instance.
+* ✅ Result: All EC2s across AZs access the same file system **concurrently**.
+
+---
+
+## 2️⃣ **What happens if one AZ goes down – will EFS still work?**
+
+* **Yes, EFS is highly available**:
+
+  * Data is stored **redundantly across multiple AZs**.
+  * Even if **one AZ fails**, EC2 instances in other AZs can still access the file system.
+* Only caveat: EC2 instances in the **downed AZ lose access** until the AZ recovers.
+* Interview Tip: “EFS is multi-AZ by design → no single point of failure for storage.”
+
+---
+
+## 3️⃣ **EFS Lifecycle Management “IA class” – when does a file move?**
+
+* Files move to **Infrequent Access (EFS-IA)** after **N days of no access**.
+* N can be configured: **7, 14, 30, 60, 90 days**.
+* Example: File last read 10 days ago, IA lifecycle = 7 days → moved to IA class.
+* Accessing file in IA → automatically moved back to **Standard class**.
+
+---
+
+## 4️⃣ **EFS Access Points – how do they simplify multi-user access?**
+
+* Access Points are **entry points with preconfigured POSIX identity** (UID/GID).
+* Use case: Multi-user workloads where each user/app needs **isolated directory**.
+* Benefits:
+
+  * No need to manage UID/GID inside container manually.
+  * Can enforce **root squashing** → users cannot escape their directories.
+  * Simplifies **multi-tenant workloads in EKS/ECS**.
+
+---
+
+## 5️⃣ **How to integrate EFS with ECS Fargate / EKS pods?**
+
+### **ECS Fargate:**
+
+* Create **EFS file system + Access Point**.
+* In ECS Task Definition → define **volume with EFSConfig**:
+
+  ```json
+  "volumes": [{
+      "name": "efs-volume",
+      "efsVolumeConfiguration": {
+          "fileSystemId": "fs-12345678",
+          "rootDirectory": "/app-data",
+          "transitEncryption": "ENABLED",
+          "authorizationConfig": {
+              "accessPointId": "fsap-12345678",
+              "iam": "ENABLED"
+          }
+      }
+  }]
+  ```
+* Mount in container → container sees EFS storage like local volume.
+
+### **EKS Pods:**
+
+* Use **EFS CSI Driver**:
+
+  1. Install `amazon-efs-csi-driver`.
+  2. Create **StorageClass**, **PersistentVolume (PV)**, **PersistentVolumeClaim (PVC)** pointing to EFS.
+  3. Pods use PVC → automatically mount EFS.
+
+* ✅ Benefits: Shared storage across multiple pods, dynamic scaling, multi-AZ availability.
+
+---
